@@ -54,9 +54,6 @@ def distance_and_gradient(arr_x, mat_y, p):
     sum_ = (big_sum ** p + small_sum ** p)
     dist = sum_ ** (1/p)
  
-    # print(p)
-    # print(sum_)
-    # import ipdb; ipdb.set_trace()
     sum_ = np.maximum(sum_, 1e-5) # avoid divided by zero
     gterm = (sum_**(1/p -1)).reshape(n, 1)
     xterm = (big_sum ** (p-1)).reshape(n, 1)*x_big - (small_sum ** (p-1)).reshape(n, 1)*(1-x_big) # nxh
@@ -79,9 +76,8 @@ def gradient_descent(arr_x, mat_y, p, eps=1e-3, step_size=0.01, max_step=2000):
         prev = dist.mean()
         ct += 1
         if ct > max_step:
-            print("Reach Max Step", max_step, diff)
             break
-    return arr_x, dist, ct
+    return arr_x, dist, ct, diff
 
 def distance_grad_hessian(arr_x, mat_y, p):
     """
@@ -117,7 +113,7 @@ def distance_grad_hessian(arr_x, mat_y, p):
 
     return dist, grad, H
 
-def newton_raphson(x, y, p, eps=1e-3, step_size=0.1):
+def newton_raphson(x, y, p, eps=1e-3, step_size=0.1, max_step=2000):
     """
     newton raphson method to find the optimal x
     """
@@ -132,8 +128,10 @@ def newton_raphson(x, y, p, eps=1e-3, step_size=0.1):
         diff = np.abs(dist.mean()-prev)
         prev = dist.mean()
         ct += 1
+        if ct > max_step:
+            break
 
-    return x, dist, ct
+    return x, dist, ct, diff
 
 
 if __name__ == '__main__':

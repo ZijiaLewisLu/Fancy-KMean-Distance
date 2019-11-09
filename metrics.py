@@ -48,3 +48,13 @@ def clustering_fmeasure(label, pred):
     
     f1 = f1_score(lpair, ppair)
     return f1
+
+def cluster_evaluate(label, pred, P=False):                                                                                                                                                                  
+    nmi = normalized_mutual_info_score(label, pred, average_method="arithmetic")                                                                                                                             
+    ari = adjusted_rand_score(label, pred)                                                                                                                                                                   
+    acc = clustering_accuracy(label, pred)                                                                                                                                                                   
+    f1  = clustering_fmeasure(label, pred)                                                                                                                                                                         
+    if P:
+        print("NMI %.3f ARI %.3f ACC %.3f F1 %.3f" %
+                (nmi, ari, acc, f1))                                                                                                                                                                         
+    return nmi, ari, acc, f1 
