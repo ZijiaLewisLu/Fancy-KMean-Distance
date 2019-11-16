@@ -21,8 +21,8 @@ def clustering_accuracy(label, pred):
     num_correct = 0
     for k in range(K):
         num_same = []
+        k_idx = pred == k
         for c in range(C):
-            k_idx = pred == k
             c_idx = label == c
             join = (k_idx * c_idx).sum()
             num_same.append(join)
@@ -36,15 +36,18 @@ def clustering_fmeasure(label, pred):
         label = np.array(label)
     if not isinstance(pred , np.ndarray):
         pred  = np.array(pred)
+
+    n = len(label)
     
     lpair = label.reshape(-1, 1)
     lpair = lpair == label
     
     ppair = pred.reshape(-1, 1)
     ppair = ppair == pred
-    
-    lpair = lpair.flatten()
-    ppair = ppair.flatten()
+
+    idx = np.triu_indices(n, k=1)
+    lpair = lpair[idx]
+    ppair = ppair[idx]
     
     f1 = f1_score(lpair, ppair)
     return f1
@@ -53,7 +56,8 @@ def cluster_evaluate(label, pred, P=False):
     nmi = normalized_mutual_info_score(label, pred, average_method="arithmetic")                                                                                                                             
     ari = adjusted_rand_score(label, pred)                                                                                                                                                                   
     acc = clustering_accuracy(label, pred)                                                                                                                                                                   
-    f1  = clustering_fmeasure(label, pred)                                                                                                                                                                         
+    # f1  = clustering_fmeasure(label, pred)                                                                                                                                                                         
+    f1 = 0
     if P:
         print("NMI %.3f ARI %.3f ACC %.3f F1 %.3f" %
                 (nmi, ari, acc, f1))                                                                                                                                                                         

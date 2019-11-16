@@ -1,5 +1,5 @@
 import numpy as np
-from gd import gradient_descent, newton_raphson
+from .gd import gradient_descent, newton_raphson
 from sklearn.cluster.k_means_ import _k_init # kmeans++ initialization
 import time
 
@@ -13,7 +13,8 @@ def distance(arr_x, mat_y, p):
     dist = sum_ ** (1/p)
     return dist
 
-def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1, rs=None):
+def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1, 
+        km_max_step=3000, gd_max_step=5000, rs=None):
 
     if method == "gd":
         find_center = gradient_descent
@@ -30,6 +31,10 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1, rs=None):
     while diff > eps:
         ct += 1
         # print('iter', ct)
+        begin = time.time()
+        if ct > km_max_step:
+            print("Kmeans reach max steps", average_mse)
+            break
 
         # compute assignment
         all_dist = []
@@ -43,7 +48,7 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1, rs=None):
         average_mse = 0 # intra-cluster distance, similar to mean square error for euclidean distance
         track_niter = []
         for k in range(K):
-            mask = assign==k
+            mask = assign== k
             if mask.sum() == 0: # skip empty cluster
                 continue
 
@@ -51,7 +56,7 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1, rs=None):
 
             init_c = d.mean(axis=0) # use mean to initialize
             new_c, se, niter, diff = find_center(init_c, d, p, 
-                                    eps=eps, step_size=step_size) 
+                                    eps=eps, step_size=step_size, max_step=gd_max_step) 
             centers[k] = new_c
             track_niter.append(niter)
             # all_niters.append(niter)
@@ -62,8 +67,15 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1, rs=None):
         average_mse = average_mse / data.shape[0]
         diff = np.abs(average_mse-prev) 
         prev = average_mse
+        # end = time.time() - begin
+        # print("duration", end/60)
+        # print("iteration", np.mean(track_niter))
+        # print("mse", average_mse)
+        # break
+        if ct % 100 == 0:
+            print("iter", ct)
 
-    return centers, average_mse, assign
+    return centers, average_mse, assign, ct
 
 MP_X = None
 
@@ -103,7 +115,7 @@ def _mp_gd_helper(method, p, cid, init, cluster_mask, kwargs):
 
     return (cid, new_c, Xdist, (niter, mdist.sum()))
 
-def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, max_step=2000, rs=None):
+def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, km_max_step = 2000, gd_max_step=5000, rs=None):
     """
     multiprocess kmeans
     m: number of process to create
@@ -122,7 +134,7 @@ def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, max_step=2000
     ct = 0
 
     # all_niters = []
-    kwargs = {"eps":eps, "step_size":step_size, "max_step":max_step}
+    kwargs = {"eps":eps, "step_size":step_size, "max_step":gd_max_step}
 
     # initalize distance for the first run
     dist = []
@@ -133,8 +145,9 @@ def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, max_step=2000
 
     while diff > eps:
         ct += 1
-        # print('iter', ct)
+        print('iter', ct)
         average_mse = 0.0 
+        begin = time.time()
 
         # for each cluster, create input to _mp_gd_helper function 
         inp = []
@@ -164,6 +177,12 @@ def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, max_step=2000
         average_mse = mse / data.shape[0] # average intra-cluster distance, similar to mean square error for euclidean distance 
         diff = np.abs(average_mse-prev) 
         prev = average_mse
+
+        print("gd iterations", np.mean(niters))
+        print("sse", average_mse)
+        duration = time.time() - begin
+        print("time %.3fm"%(duration/60))
+        break
 
     pool.close()
 

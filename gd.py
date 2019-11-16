@@ -47,16 +47,34 @@ def distance_and_gradient(arr_x, mat_y, p):
     and the gradient of x to minimize the average distance
     """
     n, h = mat_y.shape
+    if n == 0:
+        import ipdb; ipdb.set_trace()
     x = np.tile(arr_x, (n, 1)) # become nxh
     x_big = x >= mat_y
-    big_sum = (x_big * (x-mat_y)).sum(axis=1) # n
-    small_sum = ((1-x_big) * (mat_y-x)).sum(axis=1)
+    big_sum = 0
+    small_sum = 0
+    B = S = False
+
+    # if has bigger than x
+    if x_big.sum() > 0:
+        big_sum = (x_big * (x-mat_y)).sum(axis=1) # n
+        B = True
+
+    # if has smaller than x
+    if x_big.sum() < n:
+        small_sum = ((1-x_big) * (mat_y-x)).sum(axis=1)
+        S = True
+
     sum_ = (big_sum ** p + small_sum ** p)
     dist = sum_ ** (1/p)
  
     sum_ = np.maximum(sum_, 1e-5) # avoid divided by zero
     gterm = (sum_**(1/p -1)).reshape(n, 1)
-    xterm = (big_sum ** (p-1)).reshape(n, 1)*x_big - (small_sum ** (p-1)).reshape(n, 1)*(1-x_big) # nxh
+    xterm = 0
+    if B:
+        xterm += (big_sum ** (p-1)).reshape(n, 1)*x_big 
+    if S:
+        xterm -= (small_sum ** (p-1)).reshape(n, 1)*(1-x_big) # nxh
     xgrad = (gterm * xterm).mean(axis=0) # h
 
     return dist, xgrad
@@ -66,17 +84,72 @@ def gradient_descent(arr_x, mat_y, p, eps=1e-3, step_size=0.01, max_step=2000):
     gradient descent method to find the optimal x
     """
     diff = 100
-    prev = -10
+    prev = 1000
 
     ct = 0
-    while diff > eps:
+    while diff > eps: # and diff_percentage > eps_percent:
         dist, gx = distance_and_gradient(arr_x, mat_y, p)
         arr_x = arr_x - step_size * gx
         diff = np.abs(dist.mean()-prev)
         prev = dist.mean()
-        ct += 1
         if ct > max_step:
+            print("GD Reach Max")
             break
+        # if ct % 500 == 0:
+            # print("  gd", ct, dist.mean())
+        ct += 1
+    return arr_x, dist, ct, diff
+
+def minibatch_gradient_descent(arr_x, mat_y, p, 
+        batch_size=512, check_interval = 10,
+        eps=1e-3, step_size=0.01, max_step=2000):
+    """
+    gradient descent method to find the optimal x
+    """
+    diff = 100
+    prev = 1000
+
+    ct = 0
+    N = mat_y.shape[0]
+    batch_size = min(N, batch_size)
+    start_idx = 0
+    track_diff = []
+    dist = np.zeros( mat_y.shape[0] )
+    order = list(range(N))
+    np.random.shuffle(order)
+    while True: # and diff_percentage > eps_percent:
+        idx = order[start_idx:start_idx+batch_size]
+        batch_y = mat_y[idx]
+        d, gx = distance_and_gradient(arr_x, batch_y, p)
+        arr_x = arr_x - step_size * gx
+
+        # record distance
+        dist[start_idx:start_idx+batch_size] = d
+
+        # reset idx and compare update difference
+        start_idx = start_idx + batch_size
+        if start_idx >= N:
+            # record step difference
+            step_diff = prev - dist.mean()
+            track_diff.append(step_diff)
+            prev = dist.mean()
+
+            # compute running difference
+            diff = np.abs(np.mean(track_diff[-3:]))
+            if diff < eps:
+                print(track_diff[-3:])
+                break
+        
+            # reset batch idx
+            start_idx = 0
+            np.random.shuffle(order)
+            dist[:] = 0
+
+        if ct > max_step:
+            print("GD Reach Max")
+            break
+
+        ct += 1
     return arr_x, dist, ct, diff
 
 def distance_grad_hessian(arr_x, mat_y, p):
