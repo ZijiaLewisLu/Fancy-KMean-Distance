@@ -47,8 +47,6 @@ def distance_and_gradient(arr_x, mat_y, p):
     and the gradient of x to minimize the average distance
     """
     n, h = mat_y.shape
-    if n == 0:
-        import ipdb; ipdb.set_trace()
     x = np.tile(arr_x, (n, 1)) # become nxh
     x_big = x >= mat_y
     big_sum = 0
@@ -61,9 +59,11 @@ def distance_and_gradient(arr_x, mat_y, p):
         B = True
 
     # if has smaller than x
-    if x_big.sum() < n:
+    if x_big.sum() < n*h:
         small_sum = ((1-x_big) * (mat_y-x)).sum(axis=1)
         S = True
+
+    assert B or S
 
     sum_ = (big_sum ** p + small_sum ** p)
     dist = sum_ ** (1/p)
@@ -95,10 +95,8 @@ def gradient_descent(arr_x, mat_y, p, eps=1e-3, step_size=0.01, max_step=2000):
         if ct > max_step:
             print("GD Reach Max")
             break
-        # if ct % 500 == 0:
-            # print("  gd", ct, dist.mean())
         ct += 1
-    return arr_x, dist, ct, diff
+    return arr_x, dist.mean(), ct, diff
 
 def minibatch_gradient_descent(arr_x, mat_y, p, 
         batch_size=512, check_interval = 10,
@@ -106,15 +104,15 @@ def minibatch_gradient_descent(arr_x, mat_y, p,
     """
     gradient descent method to find the optimal x
     """
-    diff = 100
-    prev = 1000
+    prev = 100
 
     ct = 0
     N = mat_y.shape[0]
     batch_size = min(N, batch_size)
     start_idx = 0
     track_diff = []
-    dist = np.zeros( mat_y.shape[0] )
+    track_dist = []
+    dist = np.zeros( mat_y.shape[0] ) - 1
     order = list(range(N))
     np.random.shuffle(order)
     while True: # and diff_percentage > eps_percent:
@@ -124,7 +122,7 @@ def minibatch_gradient_descent(arr_x, mat_y, p,
         arr_x = arr_x - step_size * gx
 
         # record distance
-        dist[start_idx:start_idx+batch_size] = d
+        dist[idx] = d
 
         # reset idx and compare update difference
         start_idx = start_idx + batch_size
@@ -132,25 +130,40 @@ def minibatch_gradient_descent(arr_x, mat_y, p,
             # record step difference
             step_diff = prev - dist.mean()
             track_diff.append(step_diff)
+            track_dist.append(dist.mean())
             prev = dist.mean()
 
+            # if ( dist < 0 ).any():
+                # import ipdb; ipdb.set_trace()
             # compute running difference
-            diff = np.abs(np.mean(track_diff[-3:]))
-            if diff < eps:
-                print(track_diff[-3:])
+            rel_diff = np.abs(np.mean(track_diff[-4:]))
+            abs_diff = np.mean(np.abs(track_diff[-4:]))
+            if rel_diff < eps and abs_diff < eps * 10:
                 break
+
+            if step_diff < -0.5:
+                print("Decrease Step Size", step_diff)
+                step_size = step_size/2
+
+            # if rel_diff < eps and abs_diff > eps * 10:
+                # import ipdb; ipdb.set_trace()
         
             # reset batch idx
             start_idx = 0
             np.random.shuffle(order)
-            dist[:] = 0
+            dist[:] = -1
 
         if ct > max_step:
+            # print("track_dist")
+            # print(track_dist[-20:])
+            # print("track_diff")
+            # print(track_diff[-20:])
             print("GD Reach Max")
             break
 
         ct += 1
-    return arr_x, dist, ct, diff
+
+    return arr_x, prev, ct, rel_diff
 
 def distance_grad_hessian(arr_x, mat_y, p):
     """
@@ -204,7 +217,7 @@ def newton_raphson(x, y, p, eps=1e-3, step_size=0.1, max_step=2000):
         if ct > max_step:
             break
 
-    return x, dist, ct, diff
+    return x, dist.mean(), ct, diff
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1,
     while diff > eps:
         ct += 1
         # print('iter', ct)
-        begin = time.time()
+        # begin = time.time()
         if ct > km_max_step:
             print("Kmeans reach max steps", average_mse)
             break
@@ -60,9 +60,9 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1,
             centers[k] = new_c
             track_niter.append(niter)
             # all_niters.append(niter)
-            if np.isnan(new_c).any():
-                print("Nan!!", k, new_c)
-            average_mse += se.sum()
+            # if np.isnan(new_c).any():
+                # print("Nan!!", k, new_c)
+            average_mse += se
 
         average_mse = average_mse / data.shape[0]
         diff = np.abs(average_mse-prev) 
@@ -72,8 +72,8 @@ def kmeans(data, K, p, method="gd", eps=1e-4, step_size=0.1,
         # print("iteration", np.mean(track_niter))
         # print("mse", average_mse)
         # break
-        if ct % 100 == 0:
-            print("iter", ct)
+        # if ct % 100 == 0:
+            # print("iter", ct)
 
     return centers, average_mse, assign, ct
 
@@ -145,7 +145,7 @@ def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, km_max_step =
 
     while diff > eps:
         ct += 1
-        print('iter', ct)
+        # print('iter', ct)
         average_mse = 0.0 
         begin = time.time()
 
@@ -169,8 +169,8 @@ def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, km_max_step =
             niters.append(info[0])
             mse += info[1]
 
-            if np.isnan(new_c).any():
-                print("Nan!!", k, new_c)
+            # if np.isnan(new_c).any():
+                # print("Nan!!", k, new_c)
 
         assign = np.stack(dist, axis=0).argmin(axis=0)
 
@@ -178,10 +178,10 @@ def kmeans_mp(m, data, K, p, method="gd", eps=1e-4, step_size=0.1, km_max_step =
         diff = np.abs(average_mse-prev) 
         prev = average_mse
 
-        print("gd iterations", np.mean(niters))
-        print("sse", average_mse)
-        duration = time.time() - begin
-        print("time %.3fm"%(duration/60))
+        # print("gd iterations", np.mean(niters))
+        # print("sse", average_mse)
+        # duration = time.time() - begin
+        # print("time %.3fm"%(duration/60))
         break
 
     pool.close()

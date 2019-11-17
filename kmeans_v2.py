@@ -5,8 +5,11 @@ from .kmeans import distance as compute_distance
 import time
 
 def kmeans(method, X, C, p, 
-        km_tol=1e-2, gd_tol=1e-3, initial_gd_step_size=0.5, num_reduction=3, 
+        km_tol=1e-2, gd_tol=1e-3, initial_gd_step_size=0.05, num_reduction=3, 
         batch_size=512):
+    """
+    only support gradient_descent and minibatch_gradient_descent for now
+    """
 
     squared_norm = (X**2).sum(1)
     centers = _k_init(X, C, squared_norm, np.random.RandomState())
@@ -24,21 +27,21 @@ def kmeans(method, X, C, p,
     cumu_difference = []
     while not stop:
             
-        print("KM Iteration", km_ct)
-        b = time.time()
+        # print("KM Iteration", km_ct)
+        # b = time.time()
         # update centers
         total_mse = 0
         new = []
         num_non_empty = 0
         for I in range(C):
             mask = assign == I
-            print(I, "Number of Points", mask.sum())
+            # print(I, "Number of Points", mask.sum())
             if mask.sum() == 0:
                 continue # skip empty cluster
             num_non_empty += 1
 
             if mask.sum() == 1: # cluster of only one point
-                print("Only One Point, Skip")
+                # print("Only One Point, Skip")
                 newc = X[mask]
                 new.append([I, newc])
                 continue
@@ -53,10 +56,7 @@ def kmeans(method, X, C, p,
                         step_size=gd_step_size, max_step=2000, eps=gd_tol)
 
             new.append([I, newc])
-            if mse.mean() == 0:
-                import ipdb; ipdb.set_trace()
-            print(I, "MSE", mse.mean())
-            total_mse += mse.mean()
+            total_mse += mse
 
         for i, c in new:
             centers[i] = c
@@ -80,7 +80,7 @@ def kmeans(method, X, C, p,
             if reduce_count >= num_reduction:
                 stop = True
                 print("Reached Reduce 3 times, Breakout")
-            print("Update Small Enough, Reduce GD Step Size")
+            print("Update Small Enough, Reduce GD Step Size") # reduce learning rate to improve
             gd_step_size = gd_step_size / 5
             gd_tol = gd_tol / 5
             km_tol = km_tol / 5
@@ -88,8 +88,8 @@ def kmeans(method, X, C, p,
 
         km_ct += 1
 
-        e = time.time()
-        print("Duration", (e-b)/60)
+        # e = time.time()
+        # print("Duration", (e-b)/60)
    
     mse = 0
     for i in range(C):
