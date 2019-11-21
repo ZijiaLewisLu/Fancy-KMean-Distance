@@ -46,7 +46,7 @@ class Find_Center(torch.nn.Module):
         return dist
 
 
-def auto_find_center(arr_x, mat_y, p, model, eps=1e-3, step_size=0.01, max_step=2000):
+def auto_find_center(arr_x, mat_y, p, model, eps=1e-6, step_size=0.01, max_step=2000):
     '''
       Returns:
           arr_x: center_point
@@ -61,12 +61,12 @@ def auto_find_center(arr_x, mat_y, p, model, eps=1e-3, step_size=0.01, max_step=
     new_state_dict = OrderedDict({'center': torch.from_numpy(arr_x)})
     model.load_state_dict(new_state_dict, strict=False)
 
-    diff = 100
-    prev = -10
+    diff = 10000
+    prev = 1000
     ct = 0
 
     best_loss = [1e6, 0]
-    while abs(diff) > eps and ct < max_step:
+    while diff / prev > eps and ct < max_step:
         dist = model(y)
         loss = loss_fn(dist, label)
 
@@ -74,9 +74,10 @@ def auto_find_center(arr_x, mat_y, p, model, eps=1e-3, step_size=0.01, max_step=
         if loss.data.item() < best_loss[0]:
             best_loss = [loss.data.item(), ct]
         if ct > best_loss[1] + 10:
+            print("finding center early stop!")
             break
 
-        diff = prev - loss.data.item()
+        diff = abs(prev - loss.data.item())
         prev = loss.data.item()
         model.zero_grad()
         loss.backward()
@@ -95,13 +96,13 @@ def auto_find_center(arr_x, mat_y, p, model, eps=1e-3, step_size=0.01, max_step=
 def kmeans(data, K, p, model, eps=1e-4, step_size=0.1, rs=None):
     squared_norm = (data ** 2).sum(axis=1)
     centers = _k_init(data, K, squared_norm, np.random.RandomState(rs))
-    diff = 100
-    prev = -10
+    diff = 10000
+    prev = 1000
     ct = 0
 
     # all_niters = []
     best_mse = [1e6, 0]
-    while diff > eps and ct < 50:
+    while diff / prev > eps and ct < 50:
         ct += 1
         # print('iter', ct)
 
@@ -144,6 +145,7 @@ def kmeans(data, K, p, model, eps=1e-4, step_size=0.1, rs=None):
         if average_mse < best_mse[0]:
             best_mse = [average_mse, ct]
         if ct > best_mse[1] + 10:
+            print("k-means early stop!")
             break
 
     return centers, average_mse, assign
@@ -153,7 +155,7 @@ if __name__ == "__main__":
     import scipy.sparse
     import scipy.io
 
-    filepath = '../rehighdimensiondataset/concrete.mat'
+    filepath = '../rehighdimensiondataset/housing.mat'
     try:
         f = h5py.File(filepath)
         X = scipy.sparse.csc_matrix((f['X']['data'], f['X']['ir'], f['X']['jc'])).toarray()
