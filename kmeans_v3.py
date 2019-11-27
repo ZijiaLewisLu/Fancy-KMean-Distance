@@ -77,8 +77,6 @@ def gradient_descent_iteration(arr_x, mat_y, p, model,
 
         diff = abs(prev - loss.data.item())
         prev = max( loss.data.item(), 1e-5 )
-        if prev == 0:
-            import ipdb; ipdb.set_trace()
         model.zero_grad()
         loss.backward()
         optimizer.step()
@@ -211,12 +209,11 @@ if __name__ == "__main__":
         ### Initialize Find_Center Model, set norm=False for unnormalized distance metric, norm=True for normalized distance metric
 
         all_rslt = []
-        compare = []
-        simi_list = []
         for i in range(20):
-            centers, mse_std, assign_std = kmeans(X, K, p, normed=normed, 
+            centers, mse, assign = kmeans(X, K, p, normed=normed, 
                     optim_method="rprop", batch_size=None, gpu=True)
 
+            all_rslt.append([centers, mse, assign])
 
         all_rslt.sort(key=lambda x: x[1])
         assign = all_rslt[0][2]
