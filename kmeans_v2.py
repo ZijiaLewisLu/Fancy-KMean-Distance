@@ -54,6 +54,11 @@ def kmeans(method, X, C, p,
             elif method == "sgd":
                 newc, mse, ct, diff = minibatch_gradient_descent(c, x0, p, batch_size=batch_size,
                         step_size=gd_step_size, max_step=2000, eps=gd_tol)
+            elif method == "mean":
+                newc = x0.mean(0)
+                mse = compute_distance(newc, x0, p).mean()
+                ct = 0
+                diff = 0
 
             new.append([I, newc])
             total_mse += mse
@@ -76,11 +81,11 @@ def kmeans(method, X, C, p,
         # stop criterion
         diff_mean = np.abs( np.mean(cumu_difference[-8:]) )
         if ( diff_mean < km_tol ): # and assign_diff < 0.001 :
-            print( cumu_difference[-8:] )
+            # print( cumu_difference[-8:] )
             if reduce_count >= num_reduction:
                 stop = True
-                print("Reached Reduce 3 times, Breakout")
-            print("Update Small Enough, Reduce GD Step Size") # reduce learning rate to improve
+                # print("Reached Reduce 3 times, Breakout")
+            # print("Update Small Enough, Reduce GD Step Size") # reduce learning rate to improve
             gd_step_size = gd_step_size / 5
             gd_tol = gd_tol / 5
             km_tol = km_tol / 5

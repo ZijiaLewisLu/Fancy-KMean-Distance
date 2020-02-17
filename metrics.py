@@ -57,8 +57,8 @@ def cluster_evaluate(label, pred, P=False):
     ari = adjusted_rand_score(label, pred)                                                                                                                                                                   
     acc = clustering_accuracy(label, pred)                                                                                                                                                                   
     f1  = clustering_fmeasure(label, pred)                                                                                                                                                                         
-    # f1 = 0
     if P:
-        print("NMI %.3f ARI %.3f ACC %.3f F1 %.3f" %
-                (nmi, ari, acc, f1))                                                                                                                                                                         
-    return nmi, ari, acc, f1 
+        print("F-1,  PUR,  ARI,  NMI")
+        print("%.5f, %.5f, %.5f, %.5f" %
+                (f1, acc, ari, nmi))                                                                                                                                                                         
+    return f1, acc, ari, nmi
